@@ -340,5 +340,5 @@ def invert_provide_seq(provide_seq, parsed_pdb):
         output.append(f"{current_chain}{','.join(chain_ranges)}")
 
         # Join the result with ':' between chains and add excluded regions at the start
-        formatted_output = f"{','.join(excluded_output)}:{':'.join(output)}"
+        formatted_output = excluded_output + output
         return formatted_output

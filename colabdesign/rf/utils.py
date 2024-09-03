@@ -272,38 +272,73 @@ def convert_provide_seq(provide_seq, parsed_pdb):
 
 # For inverting the fixed sequence specified in provide_seq
 def invert_provide_seq(provide_seq, parsed_pdb):
-  if provide_seq != "":
-      # Convert the exclusion string to a set of indices
-      exclude_set = set()
-      for part in provide_seq.split(','):
-          start, end = map(int, part.split('-'))
-          exclude_set.update(range(start, end + 1))
-      # Filter the residues, excluding the specified ranges
-      filtered_residues = [res for i, res in enumerate(parsed_pdb['pdb_idx'], start=1) if i not in exclude_set]
+    if provide_seq != "":
+        # Convert the exclusion string to a set of indices
+        exclude_set = set()
+        for part in provide_seq.split(','):
+            start, end = map(int, part.split('-'))
+            exclude_set.update(range(start, end + 1))
 
-      # Group consecutive residues
-      result = []
-      start = filtered_residues[0]
-      prev = start
+        # Filter the residues, excluding the specified ranges
+        filtered_residues = [res for i, res in enumerate(parsed_pdb['pdb_idx'], start=1) if i not in exclude_set]
 
-      for curr in filtered_residues[1:]:
-          if curr[0] == prev[0] and curr[1] == prev[1] + 1:
-              prev = curr
-          else:
-              result.append((start, prev))
-              start = curr
-              prev = curr
-      result.append((start, prev))  # Append the last group
+        # Group consecutive residues and determine lengths of excluded regions
+        result = []
+        excluded_regions = []
+        start = filtered_residues[0]
+        prev = start
 
-      # Format the output
-      output = []
-      for start, end in result:
-          if start == end:
-              output.append(f"{start[0]}{start[1]}")
-          else:
-              output.append(f"{start[0]}{start[1]}-{end[1]}")
+        for curr in filtered_residues[1:]:
+            if curr[0] == prev[0] and curr[1] == prev[1] + 1:
+                prev = curr
+            else:
+                result.append((start, prev))
+                start = curr
+                prev = curr
+        result.append((start, prev))  # Append the last group
 
-      # Join the result to get the final string, separating different chains with ':'
-      formatted_output = ":".join(output)
+        # Calculate excluded regions based on the `exclude_set`
+        exclude_list = sorted(list(exclude_set))
+        exclude_start = exclude_list[0]
+        exclude_prev = exclude_start
+        for i in exclude_list[1:]:
+            if i == exclude_prev + 1:
+                exclude_prev = i
+            else:
+                excluded_regions.append((exclude_start, exclude_prev))
+                exclude_start = i
+                exclude_prev = i
+        excluded_regions.append((exclude_start, exclude_prev))
 
-      return formatted_output
+        # Format the output for excluded regions with lengths
+        excluded_output = []
+        for start, end in excluded_regions:
+            length = end - start + 1
+            if start == end:
+                excluded_output.append(f"{start}")
+            else:
+                excluded_output.append(f"{length}-{length}")
+        
+        # Format the output for included regions
+        output = []
+        current_chain = result[0][0][0]
+        chain_ranges = []
+
+        for start, end in result:
+            if start[0] == current_chain:
+                if start == end:
+                    chain_ranges.append(f"{start[1]}")
+                else:
+                    chain_ranges.append(f"{start[1]}-{end[1]}")
+            else:
+                # When the chain changes, concatenate the previous chain's ranges
+                output.append(f"{current_chain}{','.join(chain_ranges)}")
+                current_chain = start[0]
+                chain_ranges = [f"{start[1]}" if start == end else f"{start[1]}-{end[1]}"]
+
+        # Append the final chain's ranges
+        output.append(f"{current_chain}{','.join(chain_ranges)}")
+
+        # Join the result with ':' between chains and add excluded regions at the start
+        formatted_output = f"{','.join(excluded_output)}:{':'.join(output)}"
+        return formatted_output

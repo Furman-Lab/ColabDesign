@@ -269,3 +269,41 @@ def convert_provide_seq(provide_seq, parsed_pdb):
     renumbered.append(f'{str(begin_idx)}-{str(end_idx)}')
 
   return ','.join(renumbered)
+
+# For inverting the fixed sequence specified in provide_seq
+def invert_provide_seq(provide_seq, parsed_pdb):
+  if provide_seq != "":
+      # Convert the exclusion string to a set of indices
+      exclude_set = set()
+      for part in provide_seq.split(','):
+          start, end = map(int, part.split('-'))
+          exclude_set.update(range(start, end + 1))
+      # Filter the residues, excluding the specified ranges
+      filtered_residues = [res for i, res in enumerate(parsed_pdb['pdb_idx'], start=1) if i not in exclude_set]
+
+      # Group consecutive residues
+      result = []
+      start = filtered_residues[0]
+      prev = start
+
+      for curr in filtered_residues[1:]:
+          if curr[0] == prev[0] and curr[1] == prev[1] + 1:
+              prev = curr
+          else:
+              result.append((start, prev))
+              start = curr
+              prev = curr
+      result.append((start, prev))  # Append the last group
+
+      # Format the output
+      output = []
+      for start, end in result:
+          if start == end:
+              output.append(f"{start[0]}{start[1]}")
+          else:
+              output.append(f"{start[0]}{start[1]}-{end[1]}")
+
+      # Join the result to get the final string, separating different chains with ':'
+      formatted_output = ":".join(output)
+
+      return formatted_output

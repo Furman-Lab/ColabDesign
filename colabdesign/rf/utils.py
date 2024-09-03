@@ -264,7 +264,6 @@ def convert_provide_seq(provide_seq, parsed_pdb):
       end_idx = pdb_idx.index((chain, end))
     else:
       begin = end = int(seq[1:])
-      print(pdb_idx)
       begin_idx = end_idx = pdb_idx.index((chain, begin))
 
     renumbered.append(f'{str(begin_idx)}-{str(end_idx)}')

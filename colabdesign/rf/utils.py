@@ -244,3 +244,27 @@ def make_animation(pos, plddt=None, Ls=None, ref=0, line_w=2.0, dpi=100):
   ani = animation.ArtistAnimation(fig, ims, blit=True, interval=120)
   plt.close()
   return ani.to_html5_video()
+
+def convert_provide_seq(provide_seq, parsed_pdb):
+  pdb_idx = parsed_pdb['pdb_idx']
+  provide_seq = provide_seq.split(',')
+
+  renumbered = []
+  for seq in provide_seq:
+    chain = seq[0]
+    if len(seq) == 1:
+      # Finding the first and last occurrence of the chain
+      begin_idx = next(i for i, item in enumerate(pdb_idx) if item[0] == chain)
+      end_idx = len(pdb_idx) - 1 - next(i for i, item in enumerate(reversed(pdb_idx)) if item[0] == chain)
+    elif '-' in seq:
+      begin, end = map(int, seq[1:].split('-'))
+      begin_idx = pdb_idx.index((chain, begin))
+      end_idx = pdb_idx.index((chain, end))
+    else:
+      begin = end = int(seq[1:])
+      print(pdb_idx)
+      begin_idx = end_idx = pdb_idx.index((chain, begin))
+
+    renumbered.append(f'{str(begin_idx)}-{str(end_idx)}')
+
+  return ','.join(renumbered)
